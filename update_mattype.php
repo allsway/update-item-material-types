@@ -90,8 +90,8 @@
 	  		Read in each line of the item csv file
 	  		Call API for every item to get the XML for the item.  
 	  		Get current itype value from internal note 3 field
-	  		Use mapping set up to get the Alma material type for each ITYPE value
-	  		PUT call to Alma API to replace the item material type
+	  		Use mapping set up in itype2mattype array to get the Alma material type for each ITYPE value
+	  		Make PUT call to Alma API to update the item material type
 	  	*/
 		$flag = true;
 		while (($line = fgetcsv($items_file)) !== FALSE) 
