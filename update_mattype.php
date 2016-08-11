@@ -1,5 +1,9 @@
 <?php
 
+	/*
+		Get call to Alma API
+		Returns XML for the record
+	*/
 	function getxml($url)
 	{
 		$curl = curl_init();
@@ -9,8 +13,8 @@
 	        curl_close($curl);
 	        if(isset($result))
 	        {
-				$xml = new SimpleXMLElement($result);
-				return $xml;
+			$xml = new SimpleXMLElement($result);
+			return $xml;
 	        }
 	        else
 	        {
@@ -18,6 +22,10 @@
 	        }
 	}
 
+	/*
+		PUT call to Alma Api
+		Takes in XML for record type
+	*/
 	function putxml($url,$body)
 	{
 		$curl = curl_init($url);
@@ -41,6 +49,9 @@
 
 	}
 	
+	/*
+		Cleans ITYPE value from note field mapping, where ITYPE value lands in the migration
+	*/
 	function get_itype_num($string)
 	{
 		$itypes = explode(':',$string);
@@ -49,6 +60,9 @@
 		return $itype_val;
 	}
 	
+	/*
+		Turns simplexml object into XML to return to Alma PUT API
+	*/
 	function make_xml($xml)
 	{
 		$doc = new DOMDocument();
@@ -58,7 +72,9 @@
 		return $return_xml;
 	}
 	
-	
+	/*
+		Campus settings in update_mattype.ini
+	*/
 	$ini_array = parse_ini_file("update_mattype.ini");
 
 	$key= $ini_array['apikey'];
@@ -119,6 +135,8 @@
 			
 			
 			echo $xml->item_data->pid . " " . $current_mat_type . " " . $itype_value . " " . $new_mattype . PHP_EOL;
+			
+			//Sets item material type to mapped new material type value
 			$xml->item_data->physical_material_type = $new_mattype;
 			
 			$xml = make_xml($xml);
@@ -129,15 +147,6 @@
 		fclose($items_file);
 		
 ?>
-
-
-
-
-
-
-
-
-
 
 
 
