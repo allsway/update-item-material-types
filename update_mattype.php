@@ -3,19 +3,19 @@
 	function getxml($url)
 	{
 		$curl = curl_init();
-        curl_setopt($curl,CURLOPT_URL, $url);
-        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
-        $result = curl_exec($curl);
-        curl_close($curl);
-        if(isset($result))
-        {
-			$xml = new SimpleXMLElement($result);
-			return $xml;
-        }
-        else
-        {
-            return -1;
-        }
+	        curl_setopt($curl,CURLOPT_URL, $url);
+	        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
+	        $result = curl_exec($curl);
+	        curl_close($curl);
+	        if(isset($result))
+	        {
+				$xml = new SimpleXMLElement($result);
+				return $xml;
+	        }
+	        else
+	        {
+	            return -1;
+	        }
 	}
 
 	function putxml($url,$body)
@@ -85,9 +85,6 @@
 	  		$itype2mattype[$line[0]] = $line[1];
 	  	}
 	  	fclose($itype_mapping);
-	  	
-	  	var_dump($itype2mattype);
-	  	
 	  	
 	  	/*
 	  		Read in each line of the item csv file
