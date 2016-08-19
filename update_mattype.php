@@ -11,15 +11,17 @@
 	        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
 	        $result = curl_exec($curl);
 	        curl_close($curl);
-	        if(isset($result))
-	        {
-			$xml = new SimpleXMLElement($result);
+	        	try 
+		{
+			$xml = new SimpleXMLElement($response);
 			return $xml;
-	        }
-	        else
-	        {
-	            return -1;
-	        }
+		}
+		catch(Exception $exception)
+		{
+			echo $exception;
+			shell_exec('echo `date` ' . $exception . ' >> mattype_errors.log');
+			exit;
+		}
 	}
 
 	/*
@@ -89,7 +91,6 @@
 		update (put xml) for item record with new material type
 	*/
 
-		$items_file = fopen($argv[1],"r");		
 	  	$itype_mapping = fopen($argv[2],"r");
 		$itype2mattype = array();
 		
@@ -109,6 +110,7 @@
 	  		Use mapping set up in itype2mattype array to get the Alma material type for each ITYPE value
 	  		Make PUT call to Alma API to update the item material type
 	  	*/
+	  	$items_file = fopen($argv[1],"r");		
 		$flag = true;
 		while (($line = fgetcsv($items_file)) !== FALSE) 
 		{
