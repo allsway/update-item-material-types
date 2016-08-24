@@ -1,9 +1,5 @@
 <?php
 
-	/*
-		Get call to Alma API
-		Returns XML for the record
-	*/
 	function getxml($url)
 	{
 		$curl = curl_init();
@@ -11,23 +7,17 @@
 	        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
 	        $result = curl_exec($curl);
 	        curl_close($curl);
-	        	try 
-		{
-			$xml = new SimpleXMLElement($response);
-			return $xml;
-		}
-		catch(Exception $exception)
-		{
-			echo $exception;
-			shell_exec('echo `date` ' . $exception . ' >> mattype_errors.log');
-			exit;
-		}
+	        if(isset($result))
+	        {
+				$xml = new SimpleXMLElement($result);
+				return $xml;
+	        }
+	        else
+	        {
+	            return -1;
+	        }
 	}
 
-	/*
-		PUT call to Alma Api
-		Takes in XML for record type
-	*/
 	function putxml($url,$body)
 	{
 		$curl = curl_init($url);
@@ -51,9 +41,6 @@
 
 	}
 	
-	/*
-		Cleans ITYPE value from note field mapping, where ITYPE value lands in the migration
-	*/
 	function get_itype_num($string)
 	{
 		$itypes = explode(':',$string);
@@ -62,9 +49,6 @@
 		return $itype_val;
 	}
 	
-	/*
-		Turns simplexml object into XML to return to Alma PUT API
-	*/
 	function make_xml($xml)
 	{
 		$doc = new DOMDocument();
@@ -74,9 +58,7 @@
 		return $return_xml;
 	}
 	
-	/*
-		Campus settings in update_mattype.ini
-	*/
+	
 	$ini_array = parse_ini_file("update_mattype.ini");
 
 	$key= $ini_array['apikey'];
@@ -91,7 +73,8 @@
 		update (put xml) for item record with new material type
 	*/
 
-	  	$itype_mapping = fopen($argv[2],"r");
+	  	$itype_mapping = fopen($argv[1],"r");
+		$items_file = fopen($argv[2],"r");		
 		$itype2mattype = array();
 		
 		/*
@@ -103,14 +86,16 @@
 	  	}
 	  	fclose($itype_mapping);
 	  	
+	  	var_dump($itype2mattype);
+	  	
+	  	
 	  	/*
 	  		Read in each line of the item csv file
 	  		Call API for every item to get the XML for the item.  
 	  		Get current itype value from internal note 3 field
-	  		Use mapping set up in itype2mattype array to get the Alma material type for each ITYPE value
-	  		Make PUT call to Alma API to update the item material type
+	  		Use mapping set up to get the Alma material type for each ITYPE value
+	  		PUT call to Alma API to replace the item material type
 	  	*/
-	  	$items_file = fopen($argv[1],"r");		
 		$flag = true;
 		while (($line = fgetcsv($items_file)) !== FALSE) 
 		{
@@ -133,12 +118,18 @@
 			$current_mat_type = $xml->item_data->physical_material_type;
 			$itype_value = $xml->item_data->internal_note_3;
 			$itype_value = get_itype_num($itype_value);
-			$new_mattype = $itype2mattype[$itype_value];
 			
+			if(isset($itype2mattype[$itype_value]))
+			{
+				$new_mattype = $itype2mattype[$itype_value];
+			}
+			else
+			{
+				// Mattype shouldn't change, should be the default that was in the item record. 
+				$new_mattype = $current_mat_type;
+			}	
 			
 			echo $xml->item_data->pid . " " . $current_mat_type . " " . $itype_value . " " . $new_mattype . PHP_EOL;
-			
-			//Sets item material type to mapped new material type value
 			$xml->item_data->physical_material_type = $new_mattype;
 			
 			$xml = make_xml($xml);
@@ -149,12 +140,6 @@
 		fclose($items_file);
 		
 ?>
-
-
-
-
-
-
 
 
 
