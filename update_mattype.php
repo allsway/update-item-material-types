@@ -1,5 +1,7 @@
 <?php
 
+
+
 	function getxml($url)
 	{
 		$curl = curl_init();
@@ -9,13 +11,19 @@
 	        curl_close($curl);
 	        if(isset($result))
 	        {
-				$xml = new SimpleXMLElement($result);
+	        	// Check for limit error
+			$xml = new SimpleXMLElement($result);
+			if ($xml->errorsExist == "true" )
+			{
+				echo "Reached too many API calls: " . $xml->errorList->error->errorMessage;
+				exit;
+			}
+			else
+			{	
 				return $xml;
-	        }
-	        else
-	        {
-	            return -1;
-	        }
+        		}
+		 }
+
 	}
 
 	function putxml($url,$body)
@@ -30,7 +38,15 @@
 		try 
 		{
 			$xml = new SimpleXMLElement($response);
-			return $xml;
+			if ($xml->errorsExist == "true" )
+			{
+				echo "Reached too many API calls: " . $xml->errorList->error->errorMessage;
+				exit;
+			}
+			else
+			{
+				return $xml;
+        		}			
 		}
 		catch(Exception $exception)
 		{
@@ -74,72 +90,93 @@
 	*/
 
 	  	$itype_mapping = fopen($argv[1],"r");
-		$items_file = fopen($argv[2],"r");		
-		$itype2mattype = array();
-		
-		/*
-			Read in itype to alma mat type mapping
-		*/
-	  	while(($line = fgetcsv($itype_mapping)) !== FALSE)
-	  	{
-	  		$itype2mattype[$line[0]] = $line[1];
-	  	}
-	  	fclose($itype_mapping);
 	  	
-	  	var_dump($itype2mattype);
-	  	
-	  	
-	  	/*
-	  		Read in each line of the item csv file
-	  		Call API for every item to get the XML for the item.  
-	  		Get current itype value from internal note 3 field
-	  		Use mapping set up to get the Alma material type for each ITYPE value
-	  		PUT call to Alma API to replace the item material type
-	  	*/
-		$flag = true;
-		while (($line = fgetcsv($items_file)) !== FALSE) 
+	  	foreach (glob("itemdirectory/*") as $file) 
 		{
-			if($flag) { $flag = false; continue; }
+	
+			$items_file = fopen($file,"r");		
+			$itype2mattype = array();
 		
 			/*
-				Get info to call API
+				Read in itype to alma mat type mapping
 			*/
-			$bib_id = $line[0];
-			$holding_id = $line[1];
-			$item_id = $line[2];
-
-			$link =  '/almaws/v1/bibs/'.$bib_id.'/holdings/'.$holding_id.'/items/'.$item_id;
-			$url = $baseurl . $link . '?apikey=' . $key;
-			$xml = getxml($url);
-
-			/*
-				Get new mat type, and replace current mat type with new mat type
-			*/
-			$current_mat_type = $xml->item_data->physical_material_type;
-			$itype_value = $xml->item_data->internal_note_3;
-			$itype_value = get_itype_num($itype_value);
-			
-			if(isset($itype2mattype[$itype_value]))
+			while(($line = fgetcsv($itype_mapping)) !== FALSE)
 			{
-				$new_mattype = $itype2mattype[$itype_value];
+				$itype2mattype[$line[0]] = $line[1];
 			}
-			else
+			fclose($itype_mapping);
+		
+			var_dump($itype2mattype);
+		
+		
+			/*
+				Read in each line of the item csv file
+				Call API for every item to get the XML for the item.  
+				Get current itype value from internal note 3 field
+				Use mapping set up to get the Alma material type for each ITYPE value
+				PUT call to Alma API to replace the item material type
+			*/
+			$flag = true;
+			while (($line = fgetcsv($items_file)) !== FALSE) 
 			{
-				// Mattype shouldn't change, should be the default that was in the item record. 
-				$new_mattype = $current_mat_type;
-			}	
+				if($flag) { $flag = false; continue; }
+		
+				/*
+					Get info to call API
+				*/
+				$bib_id = $line[0];
+				$holding_id = $line[1];
+				$item_id = $line[2];
+
+				$link =  '/almaws/v1/bibs/'.$bib_id.'/holdings/'.$holding_id.'/items/'.$item_id;
+				$url = $baseurl . $link . '?apikey=' . $key;
+				$xml = getxml($url);
+
+				/*
+					Get new mat type, and replace current mat type with new mat type
+				*/
+				$current_mat_type = $xml->item_data->physical_material_type;
+				// Will vary based on where campuses migrate the ITYPE to
+				$itype_value = $xml->item_data->statistics_note_2;
+				$itype_value = get_itype_num($itype_value);
 			
-			echo $xml->item_data->pid . " " . $current_mat_type . " " . $itype_value . " " . $new_mattype . PHP_EOL;
-			$xml->item_data->physical_material_type = $new_mattype;
+				if(isset($itype2mattype[$itype_value]))
+				{
+					$new_mattype = $itype2mattype[$itype_value];
+					echo $xml->item_data->pid . " " . $current_mat_type . " " . $itype_value . " " . $new_mattype . PHP_EOL;
+					if(trim($new_mattype.'', ' ') != trim($current_mat_type.'', ' '))
+					{
+						$xml->item_data->physical_material_type = $new_mattype;
+						$xml = make_xml($xml);
+						$result = putxml($url,$xml);
+						var_dump($result);
+
+					}
+					else
+					{
+						echo  "Mat types are equal" .  PHP_EOL;
+					}
+				}
+				else
+				{
+					// Do nothing - there isn't an update required 
+				}	
 			
-			$xml = make_xml($xml);
-			$result = putxml($url,$xml);
-			var_dump($result);
+
 	
+			}
+				print $items_file . PHP_EOL;
+				fclose($items_file);
+
 		}
-		fclose($items_file);
 		
 ?>
+
+
+
+
+
+
 
 
 
