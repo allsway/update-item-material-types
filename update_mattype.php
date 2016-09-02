@@ -91,6 +91,8 @@
 	$key= $ini_array['apikey'];
 	$baseurl = $ini_array['baseurl'];
 	$campuscode = $ini_array['campuscode'];
+	$itype_field = $ini_array['itype_location'];
+
 	
 	/*
 		Read through every item record
@@ -146,7 +148,7 @@
 			*/
 			$current_mat_type = $xml->item_data->physical_material_type;
 			// Will vary based on where campuses migrate the ITYPE to
-			$itype_value = $xml->item_data->internal_note_3;
+			$itype_value = $xml->item_data->$itype_field;
 			$itype_value = get_itype_num($itype_value);
 		
 			// Not all itypes map directly to an item material type.  If there is no mapping, there is no update, and no PUT request		
@@ -186,25 +188,6 @@
 			fclose($items_file);
 		
 ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
