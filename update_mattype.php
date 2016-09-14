@@ -1,5 +1,7 @@
 <?php
 
+	// Memory issues? Testing increasing the memory. 
+	ini_set('memory_limit', '200M');	
 	/*
 		Gets the item from the Alma item GET API
 	*/
@@ -10,19 +12,31 @@
 	        curl_setopt($curl,CURLOPT_RETURNTRANSFER, true);
 	        $result = curl_exec($curl);
 	        curl_close($curl);
-	        if(isset($result))
+	        try
 	        {
 	        	// Check for limit error
-			$xml = new SimpleXMLElement($result);
-			if ($xml->errorsExist == "true" )
-			{
-				echo "Reached too many API calls: " . $xml->errorList->error->errorMessage;
-				exit;
-			}
-			else
-			{	
-				return $xml;
-	        	}
+				$xml = new SimpleXMLElement($result);
+				var_dump($xml);
+				if ($xml->errorsExist == "true" )
+				{
+					shell_exec('echo `date` ' . $xml->errorList->error->errorCode . " : " .  $xml->errorList->error->errorMessage .  ' >> mattype_errors.log');
+					if($xml->errorsExist->errorList->error->errorCode == "DAILY_THRESHOLD" || $xml->errorsExist->errorList->error->errorCode == "PER_SECOND_THRESHOLD")
+					{
+						exit;
+					}
+				}
+				else
+				{	
+					return $xml;
+				}
+	        }
+	        catch(Exception $exception)
+	        {
+	        	echo $url . PHP_EOL;
+	        	shell_exec('echo `date`  ' . $url . ' >> mattype_errors.log');
+	        	echo $exception;
+	        	shell_exec('echo `date` ' . $exception . ' >> mattype_errors.log');
+
 	        }
 	}
 
@@ -43,8 +57,8 @@
 			$xml = new SimpleXMLElement($response);
 			if ($xml->errorsExist == "true" )
 			{
+				shell_exec('echo `date` ' . $xml->errorsExist->errorList->error->errorCode . " : " .  $xml->errorsExist->errorList->error->errorMessage .  ' >> mattype_errors.log');
 				echo "Reached too many API calls: " . $xml->errorList->error->errorMessage;
-				exit;
 			}
 			else
 			{
@@ -55,7 +69,6 @@
 		{
 			echo $exception;
 			shell_exec('echo `date` ' . $exception . ' >> mattype_errors.log');
-			exit;
 		}
 
 	}
@@ -184,7 +197,6 @@
 
 	
 		}
-			print $items_file . PHP_EOL;
 			fclose($items_file);
 		
 ?>
